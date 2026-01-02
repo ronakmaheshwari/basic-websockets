@@ -1,0 +1,8 @@
+node_modules
+.git
+*.log
+.env
+.vscode
+dist
+.cache
+.next
