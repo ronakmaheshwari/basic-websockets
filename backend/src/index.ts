@@ -2,14 +2,7 @@ import express, { Request, Response } from "express"
 import { WebSocketServer } from "ws"
 
 const app = express()
-
-app.post("/signup",async(req: Request, res: Response) => {
-    try {
-        
-    } catch (error) {
-        
-    }
-})
+app.use("/api/v1",)
 
 const server = app.listen(3000, () => {
   console.log("HTTP + WS server running on port 3000");
