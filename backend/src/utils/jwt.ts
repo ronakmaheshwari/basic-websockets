@@ -19,3 +19,5 @@ const verifyJWT = (token: string) => {
         roomId: string
     };
 }
+
+export {signJWT,verifyJWT}
