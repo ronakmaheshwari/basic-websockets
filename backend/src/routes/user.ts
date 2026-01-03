@@ -1,84 +1,90 @@
 import { Request, Response, Router } from "express";
-import ApiError from "../utils/error.js";
-import { loginValidation, SignupType, signupValidation } from "../utils/zod.js";
 import bcrypt from "bcrypt";
+import dotenv from "dotenv";
+import ApiError from "../utils/error.js";
+import { signupValidation, loginValidation, SignupType } from "../utils/zod.js";
 import db from "../utils/db.js";
 import { signJWT } from "../utils/jwt.js";
-import dotenv from "dotenv"
-import { fi } from "zod/v4/locales";
 
-dotenv.config()
+dotenv.config();
 
-const userRouter:Router = Router();
-const SaltRound = process.env.saltround || "10"
+const userRouter: Router = Router();
+const SaltRound = parseInt(process.env.saltround || "10");
 
-if(!SaltRound){
-    throw ApiError.internal(`No Saltrounds were provided ${SaltRound}`);
+if (!SaltRound) {
+  throw ApiError.internal("No saltrounds were provided");
 }
 
-userRouter.post("/signup", async(req: Request, res: Response) => {
-    try {
-        const parsed = signupValidation.safeParse(req.body);
-        if(!parsed.success){
-            throw ApiError.badRequest(`Invalid data was provided ${parsed.error.flatten().fieldErrors}`)
-        }
-        const {name, email, password}: SignupType = parsed.data;
-        const emailCheck = await db.user.findUnique({
-            where:{
-                email
-            }
-        })
+const formatZodErrors = (errors: Record<string, string[]>) =>
+  Object.entries(errors)
+    .map(([field, errs]) => `${field}: ${errs?.join(", ")}`)
+    .join("; ");
 
-        if(emailCheck){
-            throw ApiError.conflict(`The given email ${email} already exists`);
-        }
+userRouter.post("/signup", async (req: Request, res: Response, next) => {
+  try {
+    const parsed = signupValidation.safeParse(req.body);
 
-        const hashedPassword =await bcrypt.hash(password,SaltRound);
-        const createUser = await db.user.create({
-            data:{
-                name: name,
-                email: email,
-                password: hashedPassword
-            }
-        })
-        const token = signJWT(createUser.id);
-        res.status(200).json({
-            message: `${createUser.name} successfully created an account`,
-            token: token
-        })
-
-    } catch (error) {
-        throw ApiError.internal(`[SIGNUP ERROR]: Error took place ${error}`)
+    if (!parsed.success) {
+      const messages = formatZodErrors(parsed.error.flatten().fieldErrors);
+      return next(ApiError.badRequest(`Invalid data was provided: ${messages}`));
     }
-})
 
-userRouter.post("/login",async(req: Request,res: Response) => {
-    try {
-        const parsed = loginValidation.safeParse(req.body);
-        if(!parsed.success){
-            throw ApiError.badRequest(`Invalid data was provided ${parsed.error.flatten().fieldErrors}`)
-        }
-        const {email,password} = parsed.data;
-        const findEmail = await db.user.findUnique({
-            where:{
-                email
-            }
-        })
-        if(!findEmail){
-            throw ApiError.notFound(`The given ${email} doesn't have an account`);
-        }
-        const hashedPassword = await bcrypt.compare(password,findEmail.password);
-        if(!hashedPassword){
-            throw ApiError.unauthorized("Invalid Password was provided");
-        }
-        const token = signJWT(findEmail.id);
-        res.status(200).json({
-            message: `${findEmail.email} successfully logged-in`,
-            token: token
-        })
-    } catch (error) {
-        throw ApiError.internal(`[LOGIN ERROR]: Error took place ${error}`)
+    const { name, email, password }: SignupType = parsed.data;
+
+    const emailCheck = await db.user.findUnique({ where: { email } });
+    if (emailCheck) {
+      return next(ApiError.conflict(`The given email ${email} already exists`));
     }
-})
+
+    const hashedPassword = await bcrypt.hash(password, SaltRound);
+
+    const createUser = await db.user.create({
+      data: { name, email, password: hashedPassword },
+    });
+
+    const token = signJWT(createUser.id);
+
+    res.status(200).json({
+      message: `${createUser.name} successfully created an account`,
+      token,
+    });
+  } catch (error) {
+    console.error("[SIGNUP ERROR]", error);
+    next(ApiError.internal("An unexpected error occurred during signup"));
+  }
+});
+
+userRouter.post("/login", async (req: Request, res: Response, next) => {
+  try {
+    const parsed = loginValidation.safeParse(req.body);
+
+    if (!parsed.success) {
+      const messages = formatZodErrors(parsed.error.flatten().fieldErrors);
+      return next(ApiError.badRequest(`Invalid data was provided: ${messages}`));
+    }
+
+    const { email, password } = parsed.data;
+
+    const user = await db.user.findUnique({ where: { email } });
+    if (!user) {
+      return next(ApiError.notFound(`The given email ${email} doesn't have an account`));
+    }
+
+    const isValidPassword = await bcrypt.compare(password, user.password);
+    if (!isValidPassword) {
+      return next(ApiError.unauthorized("Invalid password was provided"));
+    }
+
+    const token = signJWT(user.id);
+
+    res.status(200).json({
+      message: `${user.email} successfully logged-in`,
+      token,
+    });
+  } catch (error) {
+    console.error("[LOGIN ERROR]", error);
+    next(ApiError.internal("An unexpected error occurred during login"));
+  }
+});
 
 export default userRouter;

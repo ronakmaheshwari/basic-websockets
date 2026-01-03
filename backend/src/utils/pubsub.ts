@@ -1,7 +1,9 @@
 import {createClient} from "redis"
 
 export const redis = createClient()
-export const redisSub = redis.duplicate()
+export const redisSub = redis.duplicate();
 
-await redis.connect()
-await redisSub.connect()
+(async () => {
+  await redis.connect();
+  await redisSub.connect();
+})();

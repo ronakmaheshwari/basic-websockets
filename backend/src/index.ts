@@ -1,8 +1,21 @@
 import express, { Request, Response } from "express"
 import { WebSocketServer } from "ws"
+import morgan from "morgan"
+import router from "./routes/router.js";
+import ApiError from "./utils/error.js";
 
 const app = express()
-app.use("/api/v1",)
+app.use(express.json());
+app.use(morgan("dev"));
+app.use("/api/v1",router);
+
+app.use((err: any, req: Request, res: Response, next: Function) => {
+  if (err instanceof ApiError) {
+    return res.status(err.statusCode).json({ message: err.message });
+  }
+  console.error("Unexpected Error:", err);
+  return res.status(500).json({ message: "Internal Server Error" });
+});
 
 const server = app.listen(3000, () => {
   console.log("HTTP + WS server running on port 3000");
