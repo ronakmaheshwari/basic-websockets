@@ -1,23 +1,28 @@
 import jwt from "jsonwebtoken"
-import dotenv from "dotenv"
 import ApiError from "./error.js"
-dotenv.config()
 
 const JWT_SECRET = process.env.JWT_SECRET
-
-if(!JWT_SECRET){
-    throw ApiError.internal(`[JWT]: ENV Variable ${JWT_SECRET} is not set!`)
+if (!JWT_SECRET) {
+  throw ApiError.internal("[JWT]: JWT_SECRET is not set")
 }
 
-const signJWT = (userId: string, roomId?: string) => {
-    return jwt.sign({userId: userId, ...(roomId && {roomId: roomId})}, JWT_SECRET, {expiresIn: "30m"})
+export interface JWTPayload {
+  userId: string
+  roomId?: string
 }
 
-const verifyJWT = (token: string) => {
-    return jwt.verify(token,JWT_SECRET) as {
-        userId: string,
-        roomId: string
-    };
+export const signJWT = (userId: string, roomId?: string) => {
+  return jwt.sign(
+    { userId, ...(roomId && { roomId }) },
+    JWT_SECRET,
+    { expiresIn: "30m" }
+  )
 }
 
-export {signJWT,verifyJWT}
+export const verifyJWT = (token: string): JWTPayload => {
+  try {
+    return jwt.verify(token, JWT_SECRET) as JWTPayload
+  } catch {
+    throw ApiError.unauthorized("Invalid or expired token")
+  }
+}

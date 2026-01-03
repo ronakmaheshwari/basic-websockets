@@ -27,8 +27,9 @@ model User {
 model Room {
   id String @id @default(uuid())
   title String 
-  maxUses Int
+  maxUsers Int
   roomCode String @unique
+  roomAdmin String
   createdAt DateTime @default(now())
   expiresAt DateTime
   participants Participant[]
