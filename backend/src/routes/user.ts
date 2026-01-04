@@ -15,7 +15,7 @@ if (!SaltRound) {
   throw ApiError.internal("No saltrounds were provided");
 }
 
-const formatZodErrors = (errors: Record<string, string[]>) =>
+export const formatZodErrors = (errors: Record<string, string[]>) =>
   Object.entries(errors)
     .map(([field, errs]) => `${field}: ${errs?.join(", ")}`)
     .join("; ");

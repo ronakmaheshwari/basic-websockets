@@ -5,22 +5,28 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const adapter = new PrismaPg({
-  connectionString: process.env.DATABASE_URL!, // Required
+  connectionString: process.env.DATABASE_URL!,
 });
 
 declare global {
   var prisma: PrismaClient | undefined;
 }
 
-export const db =
+const prismaClient =
   global.prisma ??
   new PrismaClient({
-    log: ["query", "warn", "error"],
-    adapter, 
+    log:
+      process.env.NODE_ENV === "development"
+        ? ["query", "warn", "error"]
+        : ["error"],
+    adapter,
   });
 
 if (process.env.NODE_ENV !== "production") {
-  global.prisma = db;
+  global.prisma = prismaClient;
 }
 
+const db: PrismaClient = prismaClient;
+
 export default db;
+export { db };

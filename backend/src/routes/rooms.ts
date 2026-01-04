@@ -2,6 +2,8 @@ import { Request, Response, Router } from "express";
 import ApiError from "../utils/error.js";
 import userMiddleware from "../middleware.js";
 import { signJWT } from "../utils/jwt.js";
+import { createRoomValidation, joinRoomValidation } from "../utils/zod.js";
+import { formatZodErrors } from "./user.js";
 
 const roomRouter: Router = Router();
 
@@ -16,11 +18,80 @@ export const randomCode = (length: number): String => {
         total = randomLetters.length - length;
     }
 
-    for(let i = 0;i<=total;i++){
+    for(let i = 0;i<total;i++){
         randomLetters += letters.charAt(Math.floor(Math.random()*letters.length));
     }
     return randomLetters;
 } 
+
+roomRouter.get("/",userMiddleware,async(req: Request, res: Response, next) => {
+  try {
+    const userId = req.userId;
+    if(!userId){
+      throw ApiError.unauthorized;
+    }
+    const findRoom = await prisma?.participant.findMany({
+      where:{
+        userId: userId
+      },
+      select:{
+        room: true
+      }
+    })
+    res.status(200).json({
+      message: "All the rooms that user joined successfully fetched",
+      data: findRoom
+    })
+  } catch (error) {
+    console.log("[JOIN ERROR]: Error took place at joining a room", error)
+    next(ApiError.internal);
+  }
+})
+
+roomRouter.get("/details",userMiddleware,async(req: Request, res: Response, next)=> {
+  try {
+    const userId = req.userId;
+    const roomId = req.roomId;
+    if(!userId || !roomId){
+      return res.status(401).json({
+        message: "Unauthorized user tried to access"
+      })
+    }
+    const findData = await prisma?.room.findUnique({
+      where: {
+        id: roomId,
+        participants: {
+          some: {
+            userId: userId
+          }
+        }
+      },
+      select: {
+        title: true,
+        maxUsers: true,
+        roomAdmin: true,
+        participants: {
+          select: {
+            user: {
+              select: {
+                name: true
+              }
+            }
+          }
+        }
+      }
+    });
+    res.status(200).json({
+      message: "Details were successfully fetched",
+      data: findData
+    })
+  } catch (error) {
+    console.log("[ROOM DETAILS ERROR]: Error took place at getting details a room", error)
+    res.status(500).json({
+      message: "Internal Error occured"
+    })
+  }
+})
 
 roomRouter.post("/create",userMiddleware,async(req: Request, res: Response, next)=> {
     try {
@@ -28,7 +99,12 @@ roomRouter.post("/create",userMiddleware,async(req: Request, res: Response, next
         if (!userId) {
             throw ApiError.unauthorized("User not authenticated")
         }
-        const {title,max} = req.body
+        const parsed = createRoomValidation.safeParse(req.body);
+        if(!parsed.success){
+          const messages = formatZodErrors(parsed.error.flatten().fieldErrors);
+          return next(ApiError.badRequest(`Invalid data was provided: ${messages}`));
+        }
+        const {title,max} = parsed.data;
         const findUser = await prisma?.user.findUnique({
             where:{
                 id: userId
@@ -69,34 +145,101 @@ roomRouter.post("/create",userMiddleware,async(req: Request, res: Response, next
 
 roomRouter.post("/join", userMiddleware, async (req: Request, res: Response, next) => {
   try {
-    const { roomCode } = req.body
-    const userId = req.userId!
-
-    const room = await prisma?.room.findUnique({
-      where: { roomCode },
-      include: { participants: true }
+    const userId = req.userId
+    if(!userId){
+      throw ApiError.unauthorized;
+    }
+    const parsed = joinRoomValidation.safeParse(req.body);
+    if(!parsed.success){
+      const messages = formatZodErrors(parsed.error.flatten().fieldErrors);
+      return next(ApiError.badRequest(`Invalid data was provided: ${messages}`));
+    }
+    const {roomCode} = parsed.data;
+    const findRoom = await prisma?.room.findUnique({
+      where:{
+        roomCode
+      },
+      include:{
+        participants: true
+      }
     })
+    if(!findRoom){
+      throw ApiError.notFound("Invalid Room code was provided");
+    }
 
-    if (!room) throw ApiError.notFound("Room not found")
-    if (room.expiresAt < new Date())
-      throw ApiError.badRequest("Room expired")
+    if(findRoom.expiresAt < new Date()){
+      throw ApiError.notFound("Room that you provided was already expired")
+    }
 
-    if (room.participants.length >= room.maxUsers)
-      throw ApiError.badRequest("Room full")
+    if(findRoom.participants.length >= findRoom.maxUsers){
+      throw ApiError.conflict("Maximum users in the room already reached")
+    }
 
-    const exists = room.participants.some(p => p.userId === userId)
-    if (exists) throw ApiError.badRequest("Already joined")
+    const alreadyExists = findRoom.participants.some(x => x.userId === userId);
+    if(alreadyExists){
+      throw ApiError.conflict("User is already in the room");
+    }
 
     await prisma?.participant.create({
-      data: { userId, roomId: room.id }
+      data:{
+        userId: userId,
+        roomId: findRoom.id
+      }
     })
+    const token = signJWT(userId,findRoom.id);
+    res.status(200).json({
+      message: "User successfully joined the room",
+      token: token
+    })
+  } catch (error) {
+    console.log("[JOIN ERROR]: Error took place at joining a room", error)
+    next(ApiError.internal);
+  }
+})
 
-    res.json({
-      token: signJWT(userId, room.id),
-      roomId: room.id
+roomRouter.get("/:id/leave",userMiddleware,async(req: Request, res: Response, next) => {
+  try {
+    const userId = req.userId;
+    const roomId = req.params.id;
+    if(!userId){
+      throw ApiError.unauthorized;
+    }
+    const findRoom = await prisma?.room.findUnique({
+      where:{
+        id: roomId
+      }
     })
-  } catch (e) {
-    next(e)
+    if(!findRoom){
+      throw ApiError.notFound("Invalid Room Code was provided")
+    }
+    if(findRoom.expiresAt < new Date()){
+      throw ApiError.notFound("The room is already expired")
+    }
+
+    const removal = await prisma?.$transaction(async(x) => {
+      await x.participant.delete({
+        where: {
+          roomId_userId: {
+            userId: userId,
+            roomId: roomId
+          }
+        }
+      })
+      await x.message.deleteMany({
+        where:{
+          senderId: userId,
+          roomId: roomId
+        }
+      })
+    });
+    
+    res.status(200).json({
+      message: "User successfully left the room",
+      data: removal
+    })
+  } catch (error) {
+    console.log("[LEAVE ERROR]: Error took place while leaving a room", error)
+    next(ApiError.internal);
   }
 })
 

@@ -19,7 +19,18 @@ const loginValidation = z.object({
       .max(64, { message: "Password must be at most 64 characters" })
 });
 
+const createRoomValidation = z.object({
+  title: z.string().min(3, {error: "Title must have atleast 3 words"}).max(20, {error: "Title must have less than 20 words"}),
+  max: z.number().min(2, {error: "Maximum value must be greater than or equal to 2"})
+})
+
+const joinRoomValidation = z.object({
+  roomCode: z.string().min(6,{error: "Room code must be greater than 6 characters"})
+})
+
 export type SignupType = z.infer<typeof signupValidation>;
 export type LoginType = z.infer<typeof loginValidation>;
+export type CreateRoomType = z.infer<typeof createRoomValidation>;
+export type JoinRoomType = z.infer<typeof joinRoomValidation>;
 
-export { signupValidation, loginValidation };
+export { signupValidation, loginValidation, createRoomValidation, joinRoomValidation };
