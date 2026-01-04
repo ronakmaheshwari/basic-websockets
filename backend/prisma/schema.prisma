@@ -51,6 +51,7 @@ model Message {
   content String
   senderId String
   roomId String
+  createdAt DateTime @default(now())
   sender User @relation(fields: [senderId], references: [id], onDelete: Cascade)
   room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
   @@index([senderId,roomId])

@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon --watch src --exec node --no-warnings --loader ts-node/esm src/index.ts",
+    "dev": "nodemon --watch src --exec \"node --no-warnings --loader ts-node/esm src/index.ts\"",
+    "dev:ws": "nodemon --watch src --exec \"node --no-warnings --loader ts-node/esm src/websockets.ts\"",
+    "dev:all": "concurrently \"npm run dev\" \"npm run dev:ws\"",
     "deploy": "node dist/index.js",
     "build": "npx tsc -b",
     "generate:db": "npx prisma generate"

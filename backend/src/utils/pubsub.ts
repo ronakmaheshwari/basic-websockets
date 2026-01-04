@@ -1,6 +1,6 @@
 import {createClient} from "redis"
 
-export const redis = createClient()
+export const redis = createClient();
 export const redisSub = redis.duplicate();
 
 (async () => {
