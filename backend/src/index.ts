@@ -1,12 +1,15 @@
 import express, { Request, Response } from "express"
 import { WebSocketServer } from "ws"
 import morgan from "morgan"
+import cors from "cors"
 import router from "./routes/router.js";
 import ApiError from "./utils/error.js";
 
 const app = express()
+
 app.use(express.json());
 app.use(morgan("dev"));
+app.use(cors());
 app.use("/api/v1",router);
 
 app.use((err: any, req: Request, res: Response, next: Function) => {
