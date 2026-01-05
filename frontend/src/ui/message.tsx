@@ -1,12 +1,37 @@
 import { useEffect, useRef, useState } from 'react'
 import { MessageCircle, Smile } from 'lucide-react'
 import EmojiPicker from 'emoji-picker-react'
+import axios from 'axios';
+
+const baseURL = "http://localhost:3000/api/v1";
+
+interface Participant {
+  user: {
+    name: string;
+  };
+}
+
+interface RoomDetails {
+  title: string;
+  maxUsers: number;
+  roomAdmin: string;
+  roomCode: string;
+  participants: Participant[];
+  countUsers: number;
+}
+
+interface RoomDetailsResponse {
+  message: string;
+  data: RoomDetails;
+}
 
 function ChatPage() {
   const [message, setMessage] = useState('')
   const [messages, setMessages] = useState<string[]>([])
   const [socket, setSocket] = useState<WebSocket | null>(null)
-  const [showEmoji, setShowEmoji] = useState(false)
+  const [showEmoji, setShowEmoji] = useState(false);
+  const [details, setDetails] = useState<RoomDetails | null>(null);
+  const token = localStorage.getItem("roomToken");
 
   const inputRef = useRef<HTMLInputElement>(null)
   const endMessageRef = useRef<HTMLDivElement>(null)
@@ -29,9 +54,18 @@ function ChatPage() {
     }
   }
 
+  async function getDetails() {
+    const response = await axios.get<RoomDetailsResponse>(`${baseURL}/room/details`,{headers: {
+      Authorization:`Bearer ${token}`
+    }});
+
+    setDetails(response.data.data);
+  }
+
   /* ---------------- WEBSOCKET ---------------- */
   useEffect(() => {
-    const ws = new WebSocket('ws://localhost:3000')
+    getDetails();
+    const ws = new WebSocket('ws://localhost:3001');
     setSocket(ws)
 
     ws.onmessage = (e) => {

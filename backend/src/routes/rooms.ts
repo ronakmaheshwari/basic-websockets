@@ -70,6 +70,7 @@ roomRouter.get("/details",userMiddleware,async(req: Request, res: Response, next
         title: true,
         maxUsers: true,
         roomAdmin: true,
+        roomCode: true,
         participants: {
           select: {
             user: {
@@ -79,11 +80,21 @@ roomRouter.get("/details",userMiddleware,async(req: Request, res: Response, next
             }
           }
         }
-      }
+      },
     });
+    const countUsers = await prisma?.participant.count({
+      where:{
+        roomId: roomId,
+        userId: userId
+      },
+    })
+    const data = {
+      ...findData,
+      countUsers
+    }
     res.status(200).json({
       message: "Details were successfully fetched",
-      data: findData
+      data: data
     })
   } catch (error) {
     console.log("[ROOM DETAILS ERROR]: Error took place at getting details a room", error)

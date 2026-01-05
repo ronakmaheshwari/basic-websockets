@@ -17,7 +17,7 @@ export const signJWT = (userId: string, roomId?: string) => {
   return jwt.sign(
     { userId, ...(roomId && { roomId }) },
     JWT_SECRET,
-    { expiresIn: "30m" }
+    { expiresIn: "1d" }
   )
 }
 

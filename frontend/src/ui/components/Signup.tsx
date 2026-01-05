@@ -4,6 +4,8 @@ import axios from "axios";
 import { Toaster, toast } from "sonner";
 import { MessageCircleMore } from "lucide-react";
 
+const baseURL = "http://localhost:3000/api/v1"
+
 interface SignupProp {
   type: "signup" | "signin";
 }
@@ -17,7 +19,7 @@ function SignupComponent({ type }: SignupProp) {
   async function handleSubmit() {
     try {
       const response = await axios.post(
-        "http://localhost:3000/api/v1/user/signup",
+        `${baseURL}/user/signup`,
         { name, email, password }
       );
       const token = response.data.token;
@@ -33,7 +35,7 @@ function SignupComponent({ type }: SignupProp) {
   async function handleSignin() {
     try {
       const response = await axios.post(
-        "http://localhost:3000/api/v1/user/login",
+        `${baseURL}/user/login`,
         { email, password }
       );
       const token = response.data.token;
