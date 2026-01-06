@@ -76,20 +76,17 @@ function ChatPage() {
       try {
         const data = JSON.parse(e.data);
 
-        // Auth success
         if (data.type === "AUTH_OK") {
           toast.success("Connected to chat server!");
           setIsAuthed(true);
           return;
         }
 
-        // Message history from DB
         if (data.replay && data.content) {
           setMessages(prev => [data.content, ...prev]);
           return;
         }
 
-        // New incoming messages
         if (data.content) {
           setMessages(prev => [...prev, data.content]);
         }
@@ -189,14 +186,12 @@ function ChatPage() {
     );
   }
 
-  /* ------------------ RENDER ------------------ */
   return (
     <div className="min-h-screen w-full bg-gray-950 flex items-center justify-center p-3">
       <div className="flex flex-col gap-3 max-w-xl w-full h-[90vh] bg-white rounded-lg border p-4">
 
-        {/* ------------------ ROOM HEADER ------------------ */}
         <div className="h-12 flex items-center justify-between bg-zinc-200 rounded-md px-4">
-          {/* Left: Icon + Title */}
+    
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 flex items-center justify-center bg-zinc-900 rounded-lg">
               <MessageCircle className="w-4 h-4 text-white" />
@@ -206,15 +201,12 @@ function ChatPage() {
             </h1>
           </div>
 
-          {/* Right: Room Code + User Menu */}
           <div className="flex items-center gap-3">
 
-            {/* Room Code */}
             <div className="flex items-center justify-center bg-gray-800 text-zinc-50 rounded px-5 py-1 whitespace-nowrap">
               Room Code: <span className="font-bold">{details.roomCode}</span>
             </div>
 
-            {/* User Dropdown */}
             <div className="relative">
               <button
                 onClick={() => setOpenUserMenu(v => !v)}
@@ -226,7 +218,6 @@ function ChatPage() {
               {openUserMenu && (
                 <div className="absolute right-0 top-8 w-48 rounded-md bg-white border shadow-md z-50">
 
-                  {/* Participants toggle */}
                   <button
                     onClick={() => setOpenParticipantMenu(v => !v)}
                     className="w-full text-left px-4 py-2 text-sm hover:bg-zinc-100 flex justify-between items-center"
@@ -236,7 +227,6 @@ function ChatPage() {
                     <ChevronDown className="w-4 h-4 ml-1" />
                   </button>
 
-                  {/* Participants list */}
                   {openParticipantMenu && details.participants && details.participants.length > 0 && (
                     <div className="border-t">
                       {details.participants.map((p, i) => (
@@ -247,7 +237,6 @@ function ChatPage() {
                     </div>
                   )}
 
-                  {/* Leave Room */}
                   <button
                     onClick={leaveRoom}
                     className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-zinc-100"
@@ -262,7 +251,6 @@ function ChatPage() {
           </div>
         </div>
 
-        {/* ------------------ CHAT MESSAGES ------------------ */}
         <div className="flex-1 overflow-y-auto bg-zinc-200 rounded-xl p-3 space-y-2">
           {messages.map((msg, i) => (
             <div key={i} className="bg-white px-3 py-2 rounded-lg text-sm w-fit max-w-[80%]">
@@ -272,10 +260,8 @@ function ChatPage() {
           <div ref={endMessageRef} />
         </div>
 
-        {/* ------------------ INPUT BAR ------------------ */}
         <div className="relative flex items-center gap-2 px-2 py-1 border border-zinc-300 rounded-xl h-14">
 
-          {/* Emoji Button */}
           <button onClick={() => setShowEmoji(v => !v)} className="text-xl">
             <Smile />
           </button>
@@ -292,7 +278,6 @@ function ChatPage() {
             </div>
           )}
 
-          {/* Input */}
           <input
             ref={inputRef}
             value={message}
@@ -303,7 +288,6 @@ function ChatPage() {
             autoFocus
           />
 
-          {/* Send Button */}
           <button
             onClick={sendMessage}
             className="px-4 h-10 bg-green-400 rounded-lg font-medium hover:bg-green-500 transition"
