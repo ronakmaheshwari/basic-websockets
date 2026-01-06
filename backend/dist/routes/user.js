@@ -1,77 +1,71 @@
 import { Router } from "express";
 import bcrypt from "bcrypt";
+import dotenv from "dotenv";
 import ApiError from "../utils/error.js";
-import { loginValidation, signupValidation } from "../utils/zod.js";
+import { signupValidation, loginValidation } from "../utils/zod.js";
 import db from "../utils/db.js";
 import { signJWT } from "../utils/jwt.js";
-import dotenv from "dotenv";
 dotenv.config();
 const userRouter = Router();
-const SaltRound = process.env.saltround || "10";
+const SaltRound = parseInt(process.env.saltround || "10");
 if (!SaltRound) {
-    throw ApiError.internal(`No Saltrounds were provided ${SaltRound}`);
+    throw ApiError.internal("No saltrounds were provided");
 }
-userRouter.post("/signup", async (req, res) => {
+export const formatZodErrors = (errors) => Object.entries(errors)
+    .map(([field, errs]) => `${field}: ${errs?.join(", ")}`)
+    .join("; ");
+userRouter.post("/signup", async (req, res, next) => {
     try {
         const parsed = signupValidation.safeParse(req.body);
         if (!parsed.success) {
-            throw ApiError.badRequest(`Invalid data was provided ${parsed.error.flatten().fieldErrors}`);
+            const messages = formatZodErrors(parsed.error.flatten().fieldErrors);
+            return next(ApiError.badRequest(`Invalid data was provided: ${messages}`));
         }
         const { name, email, password } = parsed.data;
-        const emailCheck = await db.user.findUnique({
-            where: {
-                email
-            }
-        });
+        const emailCheck = await db.user.findUnique({ where: { email } });
         if (emailCheck) {
-            throw ApiError.conflict(`The given email ${email} already exists`);
+            return next(ApiError.conflict(`The given email ${email} already exists`));
         }
         const hashedPassword = await bcrypt.hash(password, SaltRound);
         const createUser = await db.user.create({
-            data: {
-                name: name,
-                email: email,
-                password: hashedPassword
-            }
+            data: { name, email, password: hashedPassword },
         });
         const token = signJWT(createUser.id);
         res.status(200).json({
             message: `${createUser.name} successfully created an account`,
-            token: token
+            token,
         });
     }
     catch (error) {
-        throw ApiError.internal(`[SIGNUP ERROR]: Error took place ${error}`);
+        console.error("[SIGNUP ERROR]", error);
+        next(ApiError.internal("An unexpected error occurred during signup"));
     }
 });
-userRouter.post("/login", async (req, res) => {
+userRouter.post("/login", async (req, res, next) => {
     try {
         const parsed = loginValidation.safeParse(req.body);
         if (!parsed.success) {
-            throw ApiError.badRequest(`Invalid data was provided ${parsed.error.flatten().fieldErrors}`);
+            const messages = formatZodErrors(parsed.error.flatten().fieldErrors);
+            return next(ApiError.badRequest(`Invalid data was provided: ${messages}`));
         }
         const { email, password } = parsed.data;
-        const findEmail = await db.user.findUnique({
-            where: {
-                email
-            }
-        });
-        if (!findEmail) {
-            throw ApiError.notFound(`The given ${email} doesn't have an account`);
+        const user = await db.user.findUnique({ where: { email } });
+        if (!user) {
+            return next(ApiError.notFound(`The given email ${email} doesn't have an account`));
         }
-        const hashedPassword = await bcrypt.compare(password, findEmail.password);
-        if (!hashedPassword) {
-            throw ApiError.unauthorized("Invalid Password was provided");
+        const isValidPassword = await bcrypt.compare(password, user.password);
+        if (!isValidPassword) {
+            return next(ApiError.unauthorized("Invalid password was provided"));
         }
-        const token = signJWT(findEmail.id);
+        const token = signJWT(user.id);
         res.status(200).json({
-            message: `${findEmail.email} successfully logged-in`,
-            token: token
+            message: `${user.email} successfully logged-in`,
+            token,
         });
     }
     catch (error) {
-        throw ApiError.internal(`[LOGIN ERROR]: Error took place ${error}`);
+        console.error("[LOGIN ERROR]", error);
+        next(ApiError.internal("An unexpected error occurred during login"));
     }
 });
 export default userRouter;
-//# sourceMappingURL=user.js.map

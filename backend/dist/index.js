@@ -1,41 +1,50 @@
 import express from "express";
-import { WebSocketServer } from "ws";
 import morgan from "morgan";
+import cors from "cors";
 import router from "./routes/router.js";
+import ApiError from "./utils/error.js";
 const app = express();
+app.use(express.json());
 app.use(morgan("dev"));
+app.use(cors());
 app.use("/api/v1", router);
-const server = app.listen(3000, () => {
-    console.log("HTTP + WS server running on port 3000");
+app.use((err, req, res, next) => {
+    if (err instanceof ApiError) {
+        return res.status(err.statusCode).json({ message: err.message });
+    }
+    console.error("Unexpected Error:", err);
+    return res.status(500).json({ message: "Internal Server Error" });
 });
-const wss = new WebSocketServer({ server: server });
-wss.on("connection", function connection(ws, req) {
-    const ip = req.socket.remoteAddress;
-    ws.on("error", console.error);
-    setInterval(() => {
-        ws.send("The solana value is " + Math.random());
-    }, 5000);
-    ws.onopen = () => {
-        ws.send("You can send messages now");
-    };
-    ws.on("message", function message(data, isBinary) {
-        if (data.toString() === "ping") {
-            wss.clients.forEach((x) => {
-                if (x.readyState === WebSocket.OPEN) {
-                    x.send("pong");
-                }
-            });
-        }
-        wss.clients.forEach(function each(client) {
-            if (client.readyState === WebSocket.OPEN && client !== ws) {
-                client.send(data, { binary: isBinary });
-            }
-        });
-    });
-    ws.on("ping", () => {
-        ws.send("pong");
-        console.log(`Received ping from ${ip}`);
-    });
-    ws.send("Hello! Connection was accepted");
+app.listen(3000, () => {
+    console.log("HTTP server running on port 3000");
 });
-//# sourceMappingURL=index.js.map
+// const wss = new WebSocketServer({server: server})
+// wss.on("connection", function connection(ws,req){
+//     const ip = req.socket.remoteAddress;
+//     ws.on("error", console.error);
+//     setInterval(()=>{
+//         ws.send("The solana value is "+Math.random())
+//     },5000)
+//     ws.onopen = () =>{
+//         ws.send("You can send messages now");
+//     }
+//     ws.on("message", function message(data,isBinary) {
+//         if(data.toString()=== "ping"){
+//             wss.clients.forEach((x)=>{
+//                 if(x.readyState === WebSocket.OPEN){
+//                     x.send("pong")
+//                 }
+//             })
+//         }
+//         wss.clients.forEach(function each(client){
+//             if (client.readyState === WebSocket.OPEN && client !== ws) {
+//                 client.send(data, { binary: isBinary });
+//             }
+//         })
+//     })
+//     ws.on("ping", () =>{
+//         ws.send("pong");
+//         console.log(`Received ping from ${ip}`);
+//     })
+//     ws.send("Hello! Connection was accepted")
+// })

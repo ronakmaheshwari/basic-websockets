@@ -35,4 +35,3 @@ class ApiError extends Error {
     }
 }
 export default ApiError;
-//# sourceMappingURL=error.js.map
