@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { Toaster, toast } from "sonner";
@@ -25,7 +25,9 @@ function SignupComponent({ type }: SignupProp) {
       const token = response.data.token;
       localStorage.setItem("token", token);
       toast.success("User successfully created");
-      navigate("/dashboard");
+      setTimeout(() =>{
+        navigate("/dashboard");
+      }, 2000)
     } catch (error) {
       console.log(error);
       toast.error(`${error}`);
@@ -40,8 +42,10 @@ function SignupComponent({ type }: SignupProp) {
       );
       const token = response.data.token;
       localStorage.setItem("token", token);
-      toast.success("User successfully created");
-      navigate("/dashboard");
+      toast.success("User successfully logged in");
+      setTimeout(() =>{
+        navigate("/dashboard");
+      }, 2000)
     } catch (error) {
       console.log(error);
       toast.error(`${error}`);
@@ -87,7 +91,10 @@ function SignupComponent({ type }: SignupProp) {
             </p>
           </div>
 
-          <div className="space-y-2">
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            type === "signup" ? handleSubmit() : handleSignin();
+          }} className="space-y-2">
             {type === "signup" && (
               <div>
                 <label className="mb-2 block text-sm font-medium text-gray-700">
@@ -136,7 +143,7 @@ function SignupComponent({ type }: SignupProp) {
             >
               {type === "signup" ? "Create account" : "Sign in"}
             </button>
-          </div>
+          </form>
 
           <p className="mt-10 text-center text-sm text-gray-500">
             {type === "signup"
