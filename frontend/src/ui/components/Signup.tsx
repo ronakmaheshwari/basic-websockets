@@ -25,9 +25,7 @@ function SignupComponent({ type }: SignupProp) {
       const token = response.data.token;
       localStorage.setItem("token", token);
       toast.success("User successfully created");
-      setTimeout(() =>{
-        navigate("/dashboard");
-      }, 2000)
+      navigate("/dashboard");
     } catch (error) {
       console.log(error);
       toast.error(`${error}`);

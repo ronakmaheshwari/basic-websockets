@@ -118,6 +118,7 @@ roomRouter.get("/details",userMiddleware,async(req: Request, res: Response, next
         maxUsers: true,
         roomAdmin: true,
         roomCode: true,
+        expiresAt: true,
         participants: {
           select: {
             user: {
@@ -172,7 +173,7 @@ roomRouter.post("/create",userMiddleware,async(req: Request, res: Response, next
             throw ApiError.unauthorized("Invalid User was found")
         }
         const code = randomCode(6);
-        const expiresAt = new Date(Date.now() + 10 * 60 * 10000)
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000)
         const room = await prisma?.$transaction(async (x) => {
             const room = await x?.room.create({
                 data:{

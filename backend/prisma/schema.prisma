@@ -34,6 +34,7 @@ model Room {
   expiresAt DateTime
   participants Participant[]
   messages     Message[]
+  isDeleted Boolean @default(false)
 }
 
 model Participant{
@@ -52,6 +53,7 @@ model Message {
   senderId String
   roomId String
   createdAt DateTime @default(now())
+  isDeleted Boolean @default(false)
   sender User @relation(fields: [senderId], references: [id], onDelete: Cascade)
   room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
   @@index([senderId,roomId])
