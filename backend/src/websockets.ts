@@ -73,7 +73,7 @@ wss.on("connection",(ws) => {
                         roomId: socket.roomId
                     },
                     orderBy: {
-                        createdAt: "desc"
+                        createdAt: "asc"
                     },
                     take: 20
                 })
@@ -117,13 +117,13 @@ wss.on("connection",(ws) => {
 
     socket.on("close", async() =>{
         if(!socket.userId || !socket.roomId) return;
-        await db.participant.delete({
-            where: {
-                roomId_userId: {
-                    userId: socket.userId,
-                    roomId: socket.roomId
-                }
-            }
-        })
+        // await db.participant.delete({
+        //     where: {
+        //         roomId_userId: {
+        //             userId: socket.userId,
+        //             roomId: socket.roomId
+        //         }
+        //     }
+        // })
     })
 })
