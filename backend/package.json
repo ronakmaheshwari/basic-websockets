@@ -10,7 +10,7 @@
     "dev:all": "concurrently \"npm run dev\" \"npm run dev:ws\"",
     "deploy:ws": "node dist/websockets.js",
     "deploy": "node dist/index.js",
-    "deploy:all": "concurrently \"npm run deploy\" \"npm run deploy:ws\"",
+    "deploy:all": "npx prisma migrate deploy && concurrently \"npm run deploy\" \"npm run deploy:ws\"",
     "build": "npx tsc -b",
     "generate:db": "npx prisma generate"
   },

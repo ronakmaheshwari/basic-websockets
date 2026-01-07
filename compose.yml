@@ -7,7 +7,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - pgdata:/var/lib/postgressql/data
+      - pgdata:/var/lib/postgresql/data
     networks:
       - chats
   redis:
@@ -43,11 +43,12 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     ports:
-      - "8080:80"
+      - "127.0.0.1:8080:80"
     depends_on:
       - backend
     networks:
       - chats
+      
 volumes:
   pgdata:
   redisdata:
